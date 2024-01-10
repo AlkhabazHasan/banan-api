@@ -1,0 +1,41 @@
+{
+    "object": "whatsapp_business_account",
+    "entry": [
+        {
+            "id": "110628475201160",
+            "changes": [
+                {
+                    "value": {
+                        "messaging_product": "whatsapp",
+                        "metadata": {
+                            "display_phone_number": "15550313093",
+                            "phone_number_id": "111234898472512"
+                        },
+                        "contacts": [
+                            {
+                                "profile": {
+                                    "name": "السّيد حَسَن الخَبّاز"
+                                },
+                                "wa_id": "97339554485"
+                            }
+                        ],
+                        "messages": [
+                            {
+                                "from": "97339554485",
+                                "id": "wamid.HBgLOTczMzk1NTQ0ODUVAgASGBQzQUIyQkZDQUU2MUZDNDgyM0Y2RQA=",
+                                "timestamp": "1698326084",
+                                "type": "image",
+                                "image": {
+                                    "mime_type": "image/jpeg",
+                                    "sha256": "+qdpxGQ5wnCDHU655abmZPmaxwW/0zP4Jxc9uLosrIM=",
+                                    "id": "758061733001486"
+                                }
+                            }
+                        ]
+                    },
+                    "field": "messages"
+                }
+            ]
+        }
+    ]
+}
