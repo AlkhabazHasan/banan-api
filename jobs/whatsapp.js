@@ -2,75 +2,109 @@ const crypto = require("crypto");
 const axios = require("axios").default;
 const agenda = require("../config/agenda");
 const { message, sendRead, statuses } = require("../helpers/whatsapp");
+const Account = require("../models/account");
+const Message = require("../models/message");
 
-agenda.define("incoming whatsapp messages", async (job) => {
-  (async function () {
-    try {
-      const body = await message(job.attrs.data);
-      console.log(body);
+const handleIncomingMessages = async (job) => {
+  try {
+    const body = await message(job.attrs.data);
 
-      const signatureHash = crypto
-        .createHmac("sha256", process.env.KALAM_SECRET)
-        .update(JSON.stringify(body))
-        .digest("hex");
+    console.log(body, null, 2)
 
-      axios({
-        method: "POST",
-        url: "http://localhost:8080/api/v1/webhook",
-        data: JSON.stringify(body),
+    const account = await Account.findOne({
+      acId: body.acId,
+    }).exec();
+
+    const signatureHash = crypto
+      .createHmac("sha256", process.env.KALAM_SECRET)
+      .update(JSON.stringify(body))
+      .digest("hex");
+
+    const response = await axios.post(
+      account.webhookURL,
+      JSON.stringify(body),
+      {
         headers: {
           "Content-Type": "application/json",
           "X-Hub-Signature-256": `sha256=${signatureHash}`,
         },
-      })
-        .then((response) => {
-          // Handle the response
-          console.log(response.data);
-          console.log(`response ${response.status} ${response.statusText}`);
+      }
+    );
 
-          sendRead(body);
-        })
-        .catch((error) => {
-          // Handle the error
-          console.error(error);
-        });
-    } catch (err) {
-      console.error(err);
-    }
-  })();
-});
+    console.log(`response ${response.status} ${response.statusText}`);
 
-agenda.define("incoming whatsapp statuses", async (job) => {
-  (async function () {
-    try {
-      const body = await statuses(job.attrs.data);
-      console.log(`body from job: ${body}`);
+    // console.log(body)
 
-      // const signatureHash = crypto
-      //   .createHmac("sha256", process.env.KALAM_SECRET)
-      //   .update(JSON.stringify(body))
-      //   .digest("hex");
+    sendRead(body);
+  } catch (error) {
+    console.error(error);
+  }
+};
 
-      // axios({
-      //   method: "POST",
-      //   url: "http://localhost:8080/api/v1/webhook",
-      //   data: JSON.stringify(body),
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //     "X-Hub-Signature-256": `sha256=${signatureHash}`,
-      //   },
-      // })
-      //   .then((response) => {
-      //     // Handle the response
-      //     console.log(response.data);
-      //     console.log(`response ${response.status} ${response.statusText}`);
-      //   })
-      //   .catch((error) => {
-      //     // Handle the error
-      //     console.error(error);
-      //   });
-    } catch (err) {
-      console.error(err);
-    }
-  })();
-});
+const handleIncomingStatuses = async (job) => {
+  try {
+    const body = await statuses(job.attrs.data);
+
+    const account = await Account.findById(body.account).exec();
+
+    const signatureHash = crypto
+      .createHmac("sha256", process.env.KALAM_SECRET)
+      .update(JSON.stringify(body))
+      .digest("hex");
+
+    const response = await axios.post(
+      account.statusURL,
+      JSON.stringify(body),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Hub-Signature-256": `sha256=${signatureHash}`,
+        },
+      }
+    );
+
+    console.log(`response ${response.status} ${response.statusText}`);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const handleOutgoingMessages = async (job) => {
+  try {
+    const body = job.attrs.data;
+
+    const account = await Account.findOne({
+      phoneId: body.phoneId,
+    }).exec();
+
+    const msg = await Message.create({
+      meType: "text",
+      bound: "out",
+      from: account.phone,
+      messageId: body.messages[0].id,
+      text: {
+        body: body.text.body,
+      },
+      location: {
+        coordinates: [0, 0],
+      },
+      contact: {
+        profile: {
+          name: "",
+        },
+        waId: body.contacts[0].wa_id,
+      },
+      payload: body,
+      account: account.id,
+    });
+
+    return msg
+
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+agenda.define("incoming whatsapp messages", handleIncomingMessages);
+agenda.define("incoming whatsapp statuses", handleIncomingStatuses);
+agenda.define("outgoing whatsapp messages", handleOutgoingMessages);

@@ -1,40 +1,42 @@
-const crypto = require("crypto");
 const axios = require("axios").default;
-const agenda = require("../config/agenda");
-require("../jobs/webhook");
+const Account = require("../models/account");
+const webhook = require("../helpers/webhook");
 
-function get(req, res) {}
+async function get(req, res) {
+  // Add your logic for the GET request here
+}
 
-function post(req, res) {
-  const body = JSON.parse(req.body);
+async function post(req, res) {
+  try {
+    const body = JSON.parse(req.body);
 
-  axios({
-    method: "POST", // Required, HTTP method, a string, e.g. POST, GET
-    url:
-      "https://graph.facebook.com/v12.0/" +
-      process.env.PHONE_NUMBER_ID +
-      "/messages?access_token=" +
-      process.env.WHATSAPP_TOKEN,
-    data: {
-      messaging_product: "whatsapp",
-      to: "+97333181898",
-      text: { body: body.payload },
-    },
-    headers: { "Content-Type": "application/json" },
-  }).then((res) => {
-    // Handle the res
-    (async function () {
-      try {
-        await agenda.now("outgoing whatsapp messages", res.data, process.env.PHONE_NUMBER_ID);
-      } catch (err) {
-        console.error(err);
+    const account = await Account.findOne({
+      acId: body.accountId,
+    }).exec();
+
+    const response = await axios.post(
+      `https://graph.facebook.com/v15.0/${account.phoneId}/messages?access_token=${account.token}`,
+      {
+        messaging_product: "whatsapp",
+        to: body.recipient,
+        text: { body: body.payload },
+      },
+      {
+        headers: { "Content-Type": "application/json" },
       }
-    })();
-    console.log(res.data);
-    console.log(`response ${res.status} ${res.statusText}`);
-  });
+    );
 
-  return res.status(200).json({ message: "success" });
+    const data = {
+      phoneId: process.env.PHONE_NUMBER_ID,
+      text: { body: body.payload },
+    };
+
+    const msg = await webhook.message({ ...data, ...response.data });
+    res.status(200).json(msg);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Access token or phone ID is not correct" });
+  }
 }
 
 module.exports = {

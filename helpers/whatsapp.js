@@ -27,6 +27,7 @@ async function message(params) {
 
   const msg = await Message.create({
     meType: message.type,
+    bound: "in",
     from: message.from,
     messageId: message.id,
     text: {
@@ -69,35 +70,32 @@ async function statuses(params) {
   }).exec();
 
   const status = body.entry[0].changes[0].value.statuses[0];
-  console.log(`message id: ${status.id}`);
 
-  // const message = await Message.findOne({
-  //   messageId: status.id,
-  // })
-  //   .sort({ createdAt: -1 })
-  //   .limit(1)
-  //   .exec();
+  const message = await Message.findOne({
+    messageId: status.id,
+  })
+    .sort({ createdAt: -1 })
+    .limit(1)
+    .exec();
 
-  //   console.log(message)
+  const stat = await Status.create({
+    type: status.status,
+    at: status.timestamp,
+    recipientId: status.recipient_id,
+    message: message,
+    payload: body,
+    account: account.id,
+  });
 
-  // const stat = await Status.create({
-  //   type: status.status,
-  //   at: status.timestamp,
-  //   recipientId: status.recipient_id,
-  //   message: message,
-  //   payload: body,
-  //   account: account.id,
-  // });
-
-  // return {
-  //   meId: message.meId,
-  //   type: stat.type,
-  //   at: stat.timestamp,
-  //   contact: {
-  //     waId: stat.recipientId,
-  //   },
-  //   account: account.id,
-  // };
+  return {
+    meId: message.meId,
+    type: stat.type,
+    at: stat.timestamp,
+    contact: {
+      waId: stat.recipientId,
+    },
+    account: account.id,
+  };
 }
 
 async function sendRead(body) {
@@ -107,6 +105,12 @@ async function sendRead(body) {
     .sort({ createdAt: -1 })
     .limit(1)
     .exec();
+
+  const account = await Account.findOne({
+    acId: body.acId,
+  }).exec();
+
+  console.log(body);
 
   axios({
     method: "POST",
@@ -118,12 +122,11 @@ async function sendRead(body) {
     },
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+      Authorization: `Bearer ${account.token}`,
     },
   })
     .then((response) => {
       // Handle the response
-      console.log(response.data);
       console.log(`response ${response.status} ${response.statusText}`);
     })
     .catch((error) => {
@@ -133,34 +136,3 @@ async function sendRead(body) {
 }
 
 module.exports = { message, sendRead, statuses, kind };
-
-// {
-//   "object": "whatsapp_business_account",
-//   "entry": [
-//       {
-//           "id": "110628475201160",
-//           "changes": [
-//               {
-//                   "value": {
-//                       "messaging_product": "whatsapp",
-//                       "metadata": {
-//                           "display_phone_number": "15550313093",
-//                           "phone_number_id": "111234898472512"
-//                       },
-//                       "statuses": [
-//                           {
-//                               "id": "wamid.HBgLOTczMzMxODE4OTgVAgARGBIwNzkxRTdERjM3NTI3ODE4REUA",
-//                               "status": "read",
-//                               "timestamp": "1704785611",
-//                               "recipient_id": "97333181898"
-//                           }
-//                       ]
-//                   },
-//                   "field": "messages"
-//               }
-//           ]
-//       }
-//   ]
-// // }
-
-// wamid.HBgLOTczMzMxODE4OTgVAgASGBYzRUIwMDY0ODNCNTM2N0M3NjYxRTE1AA

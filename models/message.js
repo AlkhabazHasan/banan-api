@@ -18,6 +18,10 @@ const MessageSchema = new Schema(
       required: [true, "Type is required!"],
       trim: true,
     },
+    bound: {
+      type: String,
+      enum: ["in", "out"]
+    },
     from: {
       type: String,
       required: [true, "From number is required!"],

@@ -19,6 +19,18 @@ const AccountSchema = new mongoose.Schema(
       type: String,
       required: [true, "Phone number ID is required!"],
     },
+    token: {
+      type: String,
+      trim: true,
+    },
+    statusURL: {
+      type: String,
+      trim: true,
+    },
+    webhookURL: {
+      type: String,
+      trim: true,
+    },
     businessId: {
       type: String,
       trim: true,
